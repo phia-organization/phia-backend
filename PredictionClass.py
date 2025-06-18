@@ -28,14 +28,14 @@ class PredictionClass:
           model_path = f'models/knn_model.pkl'
           self.knn = joblib.load(model_path)
           print(f"✅ Model loaded from {model_path}")
-        except e:
+        except Exception as e:
             raise Exception(f"❌ Failed to load model: {e}")
         
         try:
           scaler_path = f'models/scaler.pkl'
           self.scaler = joblib.load(scaler_path)
           print(f"✅ Scaler loaded from {scaler_path}")
-        except e:
+        except Exception as e:
             raise Exception(f"❌ Failed to load scaler: {e}")
           
     def set_file_info(self, filename: str, extension: str, dir_identifier: str) -> None:

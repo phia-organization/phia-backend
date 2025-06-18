@@ -91,12 +91,12 @@ async def upload_image(file: UploadFile = File(...)):
     strip_cropped = prediction_class.crop(strip_rotated)
     strip_white_balanced = prediction_class.white_balance_gray_world(strip_cropped)
     df_rgb = prediction_class.extract_rgbs(strip_white_balanced, y_measures_cm)
-    ph_predict = prediction_class.predict_ph(df_rgb)
+    predicted_ph = prediction_class.predict_ph(df_rgb)
 
 
     return JSONResponse(
         content={
-            "predicted_ph": ph_predict,
+            "predicted_ph": predicted_ph,
             "identifier": dir_identifier,
             "rgbs": {
                 "Q1": df_rgb.loc['Q1'].to_dict(),

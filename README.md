@@ -40,14 +40,6 @@ Start the development server with:
 fastapi dev main.py
 ```
 
-> 💡 Make sure the [FastAPI CLI](https://fastapi.tiangolo.com/) is installed. If not, you can install it with:
->
-> ```bash
-> pip install fastapi[all]
-> ```
-
----
-
 ## ✅ Access the API
 
 Once running, the API will be available at:
