@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  fastapi:
+    container_name: phia-fastapi
+    build: .
+    ports:
+      - "${PORT}:${PORT}"
+    networks:
+      - phia-network
+
+networks:
+  phia-network:
+    driver: bridge
