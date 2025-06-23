@@ -24,22 +24,22 @@ class PredictionClass:
         self.extension = None
         
         if not IS_PRODUCTION:
-            print("🔧 Running in development mode. Creating output directories.")
+            print("      🔧 Running in development mode. Creating output directories.")
             os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
         
         try:
           model_path = f'models/knn_model.pkl'
           self.knn = joblib.load(model_path)
-          print(f"✅ Model loaded from {model_path}")
+          print(f"      ✅ Model loaded from {model_path}")
         except Exception as e:
-            raise Exception(f"❌ Failed to load model: {e}")
+            raise Exception(f"      ❌ Failed to load model: {e}")
         
         try:
           scaler_path = f'models/scaler.pkl'
           self.scaler = joblib.load(scaler_path)
-          print(f"✅ Scaler loaded from {scaler_path}")
+          print(f"      ✅ Scaler loaded from {scaler_path}")
         except Exception as e:
-            raise Exception(f"❌ Failed to load scaler: {e}")
+            raise Exception(f"      ❌ Failed to load scaler: {e}")
           
     def set_file_info(self, filename: str, extension: str, dir_identifier: str) -> None:
         """
@@ -54,7 +54,8 @@ class PredictionClass:
         self.extension = extension
         self.dir_identifier = dir_identifier
         
-        os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
+        if not IS_PRODUCTION:
+            os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
     
     def plot_images(
         self,
@@ -274,18 +275,19 @@ class PredictionClass:
 
         df = pd.DataFrame(df_data, index=['R', 'G', 'B']).T
 
-        plt.imshow(strip)
-        for key in ['Q1', 'Q2', 'Q3', 'Q4']:
-            proportion = y_measures_cm[key] / y_measures_cm['total']
-            y_pos = int(proportion * height)
-            plt.plot(center_x, y_pos, 'ro')
-            plt.text(center_x + 50, y_pos, key, color='red', fontsize=12, verticalalignment='center')
+        if not IS_PRODUCTION:
+            plt.imshow(strip)
+            for key in ['Q1', 'Q2', 'Q3', 'Q4']:
+                proportion = y_measures_cm[key] / y_measures_cm['total']
+                y_pos = int(proportion * height)
+                plt.plot(center_x, y_pos, 'ro')
+                plt.text(center_x + 50, y_pos, key, color='red', fontsize=12, verticalalignment='center')
 
-        plt.axis('off')
-        plt.savefig(f'outputs/{self.dir_identifier}/{self.filename}-5-extract-rgbs.{self.extension}', bbox_inches='tight', pad_inches=0)
-        # plt.show()
+            plt.axis('off')
+            plt.savefig(f'outputs/{self.dir_identifier}/{self.filename}-5-extract-rgbs.{self.extension}', bbox_inches='tight', pad_inches=0)
+            # plt.show()
 
-        df.to_csv(f'outputs/{self.dir_identifier}/{self.filename}-5-extract-rgbs.csv', index_label='Color')
+            df.to_csv(f'outputs/{self.dir_identifier}/{self.filename}-5-extract-rgbs.csv', index_label='Color')
         
         return df
 
@@ -321,9 +323,10 @@ class PredictionClass:
 
         ph_predict = self.knn.predict(normalized_features)
 
-        with open(f'outputs/{self.dir_identifier}/{self.filename}-6-predicted-ph.txt', 'w') as f:
-          f.write(f"Predicted pH: {ph_predict[0]}\n")
-          
+        if not IS_PRODUCTION:
+            with open(f'outputs/{self.dir_identifier}/{self.filename}-6-predicted-ph.txt', 'w') as f:
+                f.write(f"Predicted pH: {ph_predict[0]}\n")
+        
         return ph_predict[0]
 
 

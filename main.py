@@ -94,6 +94,7 @@ async def upload_image(file: UploadFile = File(...)):
     except Exception as e:
         return raise_http_500("pH prediction failed", e)
 
+    print(f"\n     🎯 Prediction for {dir_identifier}: {predicted_ph}")
 
     return JSONResponse(
         content={
