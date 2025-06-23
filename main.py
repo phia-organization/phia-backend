@@ -2,7 +2,7 @@ import cv2
 import uuid
 import numpy as np
 
-from lib import PingResponse, ErrorResponse, PredictionResponse
+from lib import PingResponse, ErrorResponse, PredictionResponse, raise_http_500
 from classes import PredictionClass
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -64,12 +64,36 @@ async def upload_image(file: UploadFile = File(...)):
 
     prediction_class.set_file_info(filename, extension, dir_identifier)
     
-    strip_withouth_bg = prediction_class.remove_background(image)
-    strip_rotated = prediction_class.rotate_vertically(strip_withouth_bg)
-    strip_cropped = prediction_class.crop(strip_rotated)
-    strip_white_balanced = prediction_class.white_balance_gray_world(strip_cropped)
-    df_rgb = prediction_class.extract_rgbs(strip_white_balanced, y_measures_cm)
-    predicted_ph = prediction_class.predict_ph(df_rgb)
+
+    try:
+        strip_withouth_bg = prediction_class.remove_background(image)
+    except Exception as e:
+        return raise_http_500("Background removal failed", e)
+
+    try:
+        strip_rotated = prediction_class.rotate_vertically(strip_withouth_bg)
+    except Exception as e:
+        return raise_http_500("Rotation failed", e)
+
+    try:
+        strip_cropped = prediction_class.crop(strip_rotated)
+    except Exception as e:
+        return raise_http_500("Cropping failed", e)
+
+    try:
+        strip_white_balanced = prediction_class.white_balance_gray_world(strip_cropped)
+    except Exception as e:
+        return raise_http_500("White balancing failed", e)
+
+    try:
+        df_rgb = prediction_class.extract_rgbs(strip_white_balanced, y_measures_cm)
+    except Exception as e:
+        return raise_http_500("RGB extraction failed", e)
+
+    try:
+        predicted_ph = prediction_class.predict_ph(df_rgb)
+    except Exception as e:
+        return raise_http_500("pH prediction failed", e)
 
 
     return JSONResponse(
