@@ -1,19 +1,19 @@
+import cv2
+import uuid
+import numpy as np
+
+from lib import PingResponse, ErrorResponse, PredictionResponse
+from classes import PredictionClass
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from PredictionClass import PredictionClass
-import numpy as np
-import uuid
-import cv2
+
 import imghdr
 
 app = FastAPI()
 
 MAX_IMAGE_SIZE_MB = 10
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
-
-class PingResponse(BaseModel):
-    ping: str
 
 prediction_class = PredictionClass()
 y_measures_cm = {
@@ -33,25 +33,6 @@ def read_root() -> PingResponse:
         dict: A dictionary with a greeting message.
     """
     return {"ping": "pong!"}
-
-class ErrorResponse(BaseModel):
-    detail: str
-    
-class RGB(BaseModel):
-    r: int
-    g: int
-    b: int
-
-class RGBAreas(BaseModel):
-    Q1: RGB
-    Q2: RGB
-    Q3: RGB
-    Q4: RGB
-
-class PredictionResponse(BaseModel):
-    predicted_ph: int
-    identifier: uuid.UUID
-    rgbs: RGBAreas   
 
 @app.post("/predict", responses={400: {"model": ErrorResponse}, 200: {"model": PredictionResponse}})
 async def upload_image(file: UploadFile = File(...)):
@@ -80,11 +61,8 @@ async def upload_image(file: UploadFile = File(...)):
     if image is None:
         raise HTTPException(status_code=400, detail="Failed to decode the image. Ensure it's a valid image file.")
 
-    height, width, channels = image.shape
-
 
     prediction_class.set_file_info(filename, extension, dir_identifier)
-    
     
     strip_withouth_bg = prediction_class.remove_background(image)
     strip_rotated = prediction_class.rotate_vertically(strip_withouth_bg)
