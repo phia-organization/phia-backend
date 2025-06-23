@@ -2,7 +2,7 @@ import cv2
 import uuid
 import numpy as np
 
-from lib import PingResponse, ErrorResponse, PredictionResponse, raise_http_500
+from lib import PingResponse, ErrorResponse, PredictionResponse, raise_http_500, MAX_IMAGE_SIZE_MB, ENVIRONMENT, IS_PRODUCTION
 from classes import PredictionClass
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -12,7 +12,6 @@ import imghdr
 
 app = FastAPI()
 
-MAX_IMAGE_SIZE_MB = 10
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 prediction_class = PredictionClass()

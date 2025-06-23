@@ -15,6 +15,7 @@ from rembg import remove
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsRegressor
 
+from lib import IS_PRODUCTION
 class PredictionClass:
     def __init__(self):
       
@@ -22,7 +23,9 @@ class PredictionClass:
         self.filename = None
         self.extension = None
         
-        os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
+        if not IS_PRODUCTION:
+            print("🔧 Running in development mode. Creating output directories.")
+            os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
         
         try:
           model_path = f'models/knn_model.pkl'
@@ -71,6 +74,8 @@ class PredictionClass:
             title1 (str, optional): Title for the original image. Defaults to 'Original'.
             title2 (str, optional): Title for the processed image. Defaults to 'Processed'.
         """
+        if IS_PRODUCTION:
+            return
 
         fig, axs = plt.subplots(1, 2, figsize=(12, 6))
         axs[0].imshow(cv2.cvtColor(original, cv2.COLOR_BGR2RGB))
@@ -305,9 +310,16 @@ class PredictionClass:
 
         features_array = np.array(features_flat).reshape(1, -1)
 
-        features_normalizado = self.scaler.transform(features_array)
+        columns = [
+            'R1', 'G1', 'B1',
+            'R2', 'G2', 'B2',
+            'R3', 'G3', 'B3',
+            'R4', 'G4', 'B4'
+        ]
+        features_df = pd.DataFrame([features_flat], columns=columns)
+        normalized_features = self.scaler.transform(features_df)
 
-        ph_predict = self.knn.predict(features_normalizado)
+        ph_predict = self.knn.predict(normalized_features)
 
         with open(f'outputs/{self.dir_identifier}/{self.filename}-6-predicted-ph.txt', 'w') as f:
           f.write(f"Predicted pH: {ph_predict[0]}\n")
