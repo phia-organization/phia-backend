@@ -2,6 +2,7 @@ import os
 import cv2
 import uuid
 import json
+import gdown
 import joblib
 from typing import Any
 
@@ -15,31 +16,47 @@ from rembg import remove
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsRegressor
 
-from lib import IS_PRODUCTION
+from lib import IS_PRODUCTION, MODEL_URL, SCALER_URL
+
 class PredictionClass:
     def __init__(self):
-      
         self.dir_identifier = None
         self.filename = None
         self.extension = None
-        
+
         if not IS_PRODUCTION:
             print("      🔧 Running in development mode. Creating output directories.")
             os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
-        
+
+        model_path = 'models/knn_model.pkl'
+        scaler_path = 'models/scaler.pkl'
+
+        if not os.path.exists(model_path):
+            print(f"      ⬇️ Model file not found. Downloading from Google Drive...")
+            self.download_from_drive(MODEL_URL, model_path)
+
+        if not os.path.exists(scaler_path):
+            print(f"      ⬇️ Scaler file not found. Downloading from Google Drive...")
+            self.download_from_drive(SCALER_URL, scaler_path)
+
         try:
-          model_path = f'models/knn_model.pkl'
-          self.knn = joblib.load(model_path)
-          print(f"      ✅ Model loaded from {model_path}")
+            self.knn = joblib.load(model_path)
+            print(f"      ✅ Model loaded from {model_path}")
         except Exception as e:
             raise Exception(f"      ❌ Failed to load model: {e}")
-        
+
         try:
-          scaler_path = f'models/scaler.pkl'
-          self.scaler = joblib.load(scaler_path)
-          print(f"      ✅ Scaler loaded from {scaler_path}")
+            self.scaler = joblib.load(scaler_path)
+            print(f"      ✅ Scaler loaded from {scaler_path}")
         except Exception as e:
             raise Exception(f"      ❌ Failed to load scaler: {e}")
+
+    def download_from_drive(self, url, destination):
+        try:
+            gdown.download(url, destination, quiet=False)
+        except Exception as e:
+            raise Exception(f"      ❌ Failed to download from Google Drive: {e}")
+
           
     def set_file_info(self, filename: str, extension: str, dir_identifier: str) -> None:
         """
