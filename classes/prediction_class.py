@@ -16,7 +16,7 @@ from rembg import remove
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsRegressor
 
-from lib import IS_PRODUCTION, MODEL_URL, SCALER_URL
+from lib import IS_PRODUCTION, MODEL_ID, SCALER_ID
 
 class PredictionClass:
     def __init__(self):
@@ -33,11 +33,11 @@ class PredictionClass:
 
         if not os.path.exists(model_path):
             print(f"      ⬇️ Model file not found. Downloading from Google Drive...")
-            self.download_from_drive(MODEL_URL, model_path)
+            self.download_from_drive(MODEL_ID, model_path)
 
         if not os.path.exists(scaler_path):
             print(f"      ⬇️ Scaler file not found. Downloading from Google Drive...")
-            self.download_from_drive(SCALER_URL, scaler_path)
+            self.download_from_drive(SCALER_ID, scaler_path)
 
         try:
             self.knn = joblib.load(model_path)
@@ -51,11 +51,11 @@ class PredictionClass:
         except Exception as e:
             raise Exception(f"      ❌ Failed to load scaler: {e}")
 
-    def download_from_drive(self, url, destination):
+    def download_from_drive(self, file_id, destination):
         try:
-            gdown.download(url, destination, quiet=False)
+            gdown.download(id=file_id, output=destination, quiet=False)
         except Exception as e:
-            raise Exception(f"      ❌ Failed to download from Google Drive: {e}")
+            raise Exception(f"      ❌ Failed to download from Google Drive: {str(e)}")
 
           
     def set_file_info(self, filename: str, extension: str, dir_identifier: str) -> None:
