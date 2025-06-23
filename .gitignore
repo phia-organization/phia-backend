@@ -1,8 +1,7 @@
 models/*
 !models/.gitkeep
 
-outputs/*
-!outputs/.gitkeep
+outputs
 
 __pycache__
 */__pycache__
