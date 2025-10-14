@@ -17,7 +17,6 @@ WORKDIR /app
 COPY . .
 
 ARG MODEL_ID
-RUN echo $MODEL_ID
 RUN mkdir -p models && \
     gdown --fuzzy "https://drive.google.com/uc?id=${MODEL_ID}" -O models/RandomForestClassifier.sav
 
