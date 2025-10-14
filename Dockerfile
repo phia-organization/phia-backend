@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libgl1 \
     git \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install gdown
@@ -17,15 +18,16 @@ COPY . .
 
 ARG MODEL_ID
 RUN echo $MODEL_ID
-
 RUN mkdir -p models && \
     gdown --fuzzy "https://drive.google.com/uc?id=${MODEL_ID}" -O models/RandomForestClassifier.sav
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-ENV PORT=8000
+RUN mkdir -p /root/.u2net && \
+    wget -O /root/.u2net/u2net.onnx https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx
 
+ENV PORT=8000
 EXPOSE ${PORT}
 
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
