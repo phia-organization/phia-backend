@@ -1,20 +1,13 @@
 import os
 import cv2
-import uuid
-import json
 import gdown
 import joblib
-from typing import Any
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 
 from rembg import remove
-
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.neighbors import KNeighborsRegressor
 
 from lib import IS_PRODUCTION, MODEL_ID
 
