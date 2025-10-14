@@ -9,9 +9,14 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install gdown
+
 WORKDIR /app
 
 COPY . .
+
+RUN mkdir -p models && \
+    gdown --fuzzy "https://drive.google.com/uc?id=${MODEL_ID}" -O models/RandomForestClassifier.sav
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
