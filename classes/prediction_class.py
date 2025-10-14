@@ -16,7 +16,8 @@ from rembg import remove
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsRegressor
 
-from lib import IS_PRODUCTION, MODEL_ID, SCALER_ID
+from lib import IS_PRODUCTION, MODEL_ID
+
 
 class PredictionClass:
     def __init__(self):
@@ -26,38 +27,26 @@ class PredictionClass:
 
         if not IS_PRODUCTION:
             print("      🔧 Running in development mode. Creating output directories.")
-            os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
+            os.makedirs("outputs/", exist_ok=True)
 
-        model_path = 'models/knn_model.pkl'
-        scaler_path = 'models/scaler.pkl'
+        model_path = "models/RandomForestClassifier.sav"
 
         if not os.path.exists(model_path):
-            print(f"      ⬇️ Model file not found. Downloading from Google Drive...")
-            self.download_from_drive(MODEL_ID, model_path)
-
-        if not os.path.exists(scaler_path):
-            print(f"      ⬇️ Scaler file not found. Downloading from Google Drive...")
-            self.download_from_drive(SCALER_ID, scaler_path)
+            print("      ⬇️ Model file not found. Downloading from Google Drive...")
+            try:
+                gdown.download(id=MODEL_ID, output=model_path, quiet=False)
+                print(f"      ✅ Model downloaded to {model_path}")
+            except Exception as e:
+                raise Exception(
+                    f"      ❌ Failed to download from Google Drive: {str(e)}"
+                )
 
         try:
-            self.knn = joblib.load(model_path)
+            self.model = joblib.load(model_path)
             print(f"      ✅ Model loaded from {model_path}")
         except Exception as e:
             raise Exception(f"      ❌ Failed to load model: {e}")
 
-        try:
-            self.scaler = joblib.load(scaler_path)
-            print(f"      ✅ Scaler loaded from {scaler_path}")
-        except Exception as e:
-            raise Exception(f"      ❌ Failed to load scaler: {e}")
-
-    def download_from_drive(self, file_id, destination):
-        try:
-            gdown.download(id=file_id, output=destination, quiet=False)
-        except Exception as e:
-            raise Exception(f"      ❌ Failed to download from Google Drive: {str(e)}")
-
-          
     def set_file_info(self, filename: str, extension: str, dir_identifier: str) -> None:
         """
         Sets the file information for the prediction class.
@@ -70,17 +59,17 @@ class PredictionClass:
         self.filename = filename
         self.extension = extension
         self.dir_identifier = dir_identifier
-        
+
         if not IS_PRODUCTION:
-            os.makedirs(f'outputs/{self.dir_identifier}', exist_ok=True)
-    
+            os.makedirs(f"outputs/{self.dir_identifier}", exist_ok=True)
+
     def plot_images(
         self,
         step: str,
         original: np.ndarray,
         processed: np.ndarray,
-        title1: str = 'Original',
-        title2: str = 'Processed'
+        title1: str = "Original",
+        title2: str = "Processed",
     ) -> None:
         """
         Plots two images side by side for comparison.
@@ -98,21 +87,26 @@ class PredictionClass:
         fig, axs = plt.subplots(1, 2, figsize=(12, 6))
         axs[0].imshow(cv2.cvtColor(original, cv2.COLOR_BGR2RGB))
         axs[0].set_title(title1)
-        axs[0].axis('off')
+        axs[0].axis("off")
 
         axs[1].imshow(cv2.cvtColor(processed, cv2.COLOR_BGR2RGB))
         axs[1].set_title(title2)
-        axs[1].axis('off')
+        axs[1].axis("off")
 
         plt.tight_layout()
-        
-        cv2.imwrite(f'outputs/{self.dir_identifier}/{self.filename}-{step}.{self.extension}', processed)
-        plt.savefig(f'outputs/{self.dir_identifier}/plot-{self.filename}-{step}.{self.extension}')
+
+        cv2.imwrite(
+            f"outputs/{self.dir_identifier}/{self.filename}-{step}.{self.extension}",
+            processed,
+        )
+        plt.savefig(
+            f"outputs/{self.dir_identifier}/plot-{self.filename}-{step}.{self.extension}"
+        )
         # plt.show()
 
     def remove_background(
-      self,
-      strip: np.ndarray,
+        self,
+        strip: np.ndarray,
     ) -> np.ndarray:
         """
         Removes the background from the strip image using rembg.
@@ -124,81 +118,17 @@ class PredictionClass:
             np.ndarray: The image with the background removed.
         """
         strip_without_bg = remove(strip)
-        
+
         self.plot_images(
-            step='1-remove-bg',
+            step="1-remove-bg",
             original=strip,
             processed=strip_without_bg,
-            title1='Original Strip',
-            title2='Strip without Background'
+            title1="Original Strip",
+            title2="Strip without Background",
         )
         return strip_without_bg
-      
-    def rotate_vertically(self, strip: np.ndarray) -> np.ndarray:
-        """
-        Aligns the strip vertically by detecting its orientation.
 
-        Args:
-            strip (np.ndarray): Input image of the strip.
-
-        Returns:
-            np.ndarray: The rotated image of the strip aligned vertically.
-        """
-        gray = cv2.cvtColor(strip, cv2.COLOR_BGR2GRAY)
-        _, binary = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
-
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
-            raise ValueError("Nenhum contorno encontrado.")
-
-        largest_contour = max(contours, key=cv2.contourArea)
-        rect = cv2.minAreaRect(largest_contour)
-        angle = rect[-1]
-        width, height = rect[1]
-
-        if width > height:
-            corrected_angle = angle - 90
-        else:
-            corrected_angle = angle
-
-        if corrected_angle < -45:
-            corrected_angle += 90
-
-        (h, w) = strip.shape[:2]
-        center = (w // 2, h // 2)
-        M = cv2.getRotationMatrix2D(center, corrected_angle, 1.0)
-
-        rotated = cv2.warpAffine(
-            strip,
-            M,
-            (w, h),
-            flags=cv2.INTER_CUBIC,
-            borderMode=cv2.BORDER_CONSTANT,
-            borderValue=(0, 0, 0)
-        )
-
-        gray_rotated = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
-        _, binary_rotated = cv2.threshold(gray_rotated, 10, 255, cv2.THRESH_BINARY)
-        top_half = binary_rotated[:h // 2, :]
-        bottom_half = binary_rotated[h // 2:, :]
-
-        top_mass = cv2.countNonZero(top_half)
-        bottom_mass = cv2.countNonZero(bottom_half)
-
-        if top_mass > bottom_mass:
-            rotated = cv2.flip(rotated, 0)
-
-        self.plot_images(
-            step='2-rotate-vertically',
-            original=strip,
-            processed=rotated,
-            title1='Strip without Background',
-            title2='Strip Rotated Vertically'
-        )
-
-        return rotated
-
-    def crop(    
+    def crop(
         self,
         strip: np.ndarray,
     ) -> np.ndarray:
@@ -214,141 +144,144 @@ class PredictionClass:
         gray_strip = cv2.cvtColor(strip, cv2.COLOR_BGR2GRAY)
         _, binary_strip = cv2.threshold(gray_strip, 10, 255, cv2.THRESH_BINARY)
 
-        contours, _ = cv2.findContours(binary_strip, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            binary_strip, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         largest_contour = max(contours, key=cv2.contourArea)
         x, y, w, h = cv2.boundingRect(largest_contour)
 
-        cropped = strip[y:y+h, x:x+w]
+        cropped = strip[y : y + h, x : x + w]
 
         self.plot_images(
-            step='3-crop',
+            step="3-crop",
             original=strip,
             processed=cropped,
-            title1='Rotated Strip',
-            title2='Cropped Strip'
+            title1="Rotated Strip",
+            title2="Cropped Strip",
         )
 
         return cropped
-      
-    def white_balance_gray_world(
-        self,
-        strip: np.ndarray,
-    ) -> np.ndarray:
-        """
-        Applies white balance to the strip image.
 
-        Args:
-            strip (np.ndarray): The cropped image of the strip.
+    def extract_median_rgbs(self, strip: np.ndarray) -> list[np.ndarray]:
+        if strip.shape[-1] == 4:
+            strip = strip[:, :, :3]
 
-        Returns:
-            np.ndarray: The white balanced image of the strip.
-        """
-        mean_rgb = strip.mean(axis=(0, 1))
-        mean_gray = mean_rgb.mean()
-        
-        gain = mean_gray / mean_rgb
-        balanced = strip.astype(np.float32) * gain
-        
-        balanced = np.clip(balanced, 0, 255).astype(np.uint8)
-        
+        bottom_half = strip[strip.shape[0] // 2 :, :, :]
+        upper_half = strip[: strip.shape[0] // 2, :, :]
+
+        mask = (bottom_half >= (50, 50, 50)).all(axis=-1)
+        # avg_white = np.mean(bottom_half[mask], axis=0)
+        std = np.std(bottom_half[mask], axis=0)
+        tolerated_distance = 1 * std
+
+        threshold_dark = 50
+        color_y1 = upper_half.shape[0] - 1
+        while color_y1 >= 0:
+            row = upper_half[color_y1, :, :]
+            mask = (row > threshold_dark).all(axis=1)
+            if mask.any():
+                median_pixel = np.median(row[mask], axis=0)
+                pixel_center = row[row.shape[0] // 2]
+                if not (
+                    np.abs(pixel_center - median_pixel) <= tolerated_distance
+                ).all():
+                    break
+            color_y1 -= 1
+
+        color_y0 = 0
+        while color_y0 < upper_half.shape[0]:
+            row = upper_half[color_y0, :, :]
+            mask = (row > threshold_dark).all(axis=1)
+            if mask.any():
+                median_pixel = np.median(row[mask], axis=0)
+                pixel_center = row[row.shape[0] // 2]
+                if not (
+                    np.abs(pixel_center - median_pixel) <= tolerated_distance
+                ).all():
+                    break
+            color_y0 += 1
+        color_y0 = max(0, color_y0 - 1)
+
+        cropped = upper_half[color_y0 : (color_y1 + 20), :, :]
+
         self.plot_images(
-            step='4-white-balance',
-            original=strip,
-            processed=balanced,
-            title1='Cropped Strip',
-            title2='White Balanced Strip'
+            step="4-extract-rgbs",
+            original=cv2.cvtColor(strip, cv2.COLOR_BGR2RGB),
+            processed=cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB),
+            title1="Cropped Strip",
+            title2="Area for RGB Extraction",
         )
-        
-        return balanced
 
-    def extract_rgbs(
-        self,
-        strip: np.ndarray,
-        y_measures_cm: dict[str, float],
-    ) -> pd.DataFrame:
-        """
-        Extracts RGB values from the strip image at specified y-coordinates to a data frame, with Q1, Q2, Q3 and Q4 indexed by y-coordinates in cm.
+        q0 = cropped[: cropped.shape[0] // 4, :, :]
+        q1 = cropped[cropped.shape[0] // 4 : cropped.shape[0] // 2, :, :]
+        q2 = cropped[cropped.shape[0] // 2 : 3 * cropped.shape[0] // 4, :, :]
+        q3 = cropped[3 * cropped.shape[0] // 4 :, :, :]
+        quarters = [q0, q1, q2, q3]
+        medians = []
+        threshold_dark = 5
+        for q in quarters:
+            mask = (q > threshold_dark).all(axis=-1)
+            if mask.any():
+                valid_pixels = q[mask]
+                median = np.median(valid_pixels, axis=(0))
+            else:
+                median = np.array([0, 0, 0])
+            medians.append(median)
 
-        Args:
-            strip (np.ndarray): The white balanced image of the strip.
-            y_measures_cm (dict[str, float]): Dictionary with y-coordinates in cm.
+        return medians
 
-        Returns:
-            pd.DataFrame: DataFrame containing RGB values and their corresponding y-coordinates.
-        """
-            
-        strip = cv2.cvtColor(strip, cv2.COLOR_BGR2RGB)
-        
-        height, width, _ = strip.shape
-        center_x = width // 2
+    def index_to_interval(self, index: int) -> str | None:
+        mapping = {-1: "2.50 - 4.00", 0: "4.00 - 5.50", 1: "5.50 - 7.00"}
+        return mapping.get(index)
 
-        df_data = {}
-        for key in ['Q1', 'Q2', 'Q3', 'Q4']:
-            proportion = y_measures_cm[key] / y_measures_cm['total']
-            y_pos = int(proportion * height)
-            y_pos = min(max(y_pos, 0), height - 1)
-            rgb = strip[y_pos, center_x]
-            df_data[key] = rgb[:3]
-
-        df = pd.DataFrame(df_data, index=['R', 'G', 'B']).T
-
-        if not IS_PRODUCTION:
-            plt.imshow(strip)
-            for key in ['Q1', 'Q2', 'Q3', 'Q4']:
-                proportion = y_measures_cm[key] / y_measures_cm['total']
-                y_pos = int(proportion * height)
-                plt.plot(center_x, y_pos, 'ro')
-                plt.text(center_x + 50, y_pos, key, color='red', fontsize=12, verticalalignment='center')
-
-            plt.axis('off')
-            plt.savefig(f'outputs/{self.dir_identifier}/{self.filename}-5-extract-rgbs.{self.extension}', bbox_inches='tight', pad_inches=0)
-            # plt.show()
-
-            df.to_csv(f'outputs/{self.dir_identifier}/{self.filename}-5-extract-rgbs.csv', index_label='Color')
-        
-        return df
-
-    def predict_ph(self, rgb_df: pd.DataFrame) -> float:
+    def predict_ph_interval(self, median_rgbs: list[np.ndarray]) -> str | None:
         """
         Receives a DataFrame rgb_df with index ['Q1', 'Q2', 'Q3', 'Q4'] and columns ['R', 'G', 'B'].
-        Loads the kNN model and scaler from the specified paths.
+        Loads the model model and scaler from the specified paths.
         Predicts the pH value based on the RGB values and returns it.
-        
+
         Args:
-            rgb_df (pd.DataFrame): DataFrame with RGB values indexed by Q1, Q2, Q3, and Q4.
-            model_path (str): Path to the saved kNN model.
-            scaler_path (str): Path to the saved scaler.
+            median_rgbs: list[np.ndarray]: List of RGB values for each quadrant.
         Returns:
-            float: Predicted pH value.
+            float: Predicted pH interval.
         """
+        print(median_rgbs)
+        rgb_df = pd.DataFrame(
+            median_rgbs, index=["Q1", "Q2", "Q3", "Q4"], columns=["R", "G", "B"]
+        )
 
         features_flat = []
-        for q in ['Q1', 'Q2', 'Q3', 'Q4']:
+        for q in ["Q1", "Q2", "Q3", "Q4"]:
             rgb = rgb_df.loc[q].values
             features_flat.extend(rgb.tolist())
 
-        features_array = np.array(features_flat).reshape(1, -1)
-
         columns = [
-            'R1', 'G1', 'B1',
-            'R2', 'G2', 'B2',
-            'R3', 'G3', 'B3',
-            'R4', 'G4', 'B4'
+            "Q0_R",
+            "Q0_G",
+            "Q0_B",
+            "Q1_R",
+            "Q1_G",
+            "Q1_B",
+            "Q2_R",
+            "Q2_G",
+            "Q2_B",
+            "Q3_R",
+            "Q3_G",
+            "Q3_B",
         ]
         features_df = pd.DataFrame([features_flat], columns=columns)
-        normalized_features = self.scaler.transform(features_df)
 
-        ph_predict = self.knn.predict(normalized_features)
+        ph_interval_predict = self.model.predict(features_df)
 
         if not IS_PRODUCTION:
-            with open(f'outputs/{self.dir_identifier}/{self.filename}-6-predicted-ph.txt', 'w') as f:
-                f.write(f"Predicted pH: {ph_predict[0]}\n")
-        
-        return ph_predict[0]
+            print(
+                f"      🧪 Predicted pH interval: {self.index_to_interval(ph_interval_predict[0])}"
+            )
+            with open(
+                f"outputs/{self.dir_identifier}/{self.filename}-6-predicted-ph.txt", "w"
+            ) as f:
+                f.write(
+                    f"Predicted pH interval: {self.index_to_interval(ph_interval_predict[0])}\n"
+                )
 
-
-
-
-
-
-      
+        return self.index_to_interval(ph_interval_predict[0])

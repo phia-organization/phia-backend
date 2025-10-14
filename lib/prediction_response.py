@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 import uuid
 
+
 class RGB(BaseModel):
     r: int
     g: int
     b: int
+
 
 class RGBAreas(BaseModel):
     Q1: RGB
@@ -12,7 +14,8 @@ class RGBAreas(BaseModel):
     Q3: RGB
     Q4: RGB
 
+
 class PredictionResponse(BaseModel):
-    predicted_ph: float
+    predicted_ph_interval: str | None
     identifier: uuid.UUID
     rgbs: RGBAreas
