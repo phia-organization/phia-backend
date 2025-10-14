@@ -9,21 +9,18 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala dependências necessárias
-RUN pip install --no-cache-dir gdown python-dotenv
+RUN pip install gdown
 
 WORKDIR /app
 
-# Copia o código e o .env
 COPY . .
 
-# Lê o MODEL_ID do .env e baixa o modelo do Google Drive
-RUN python -c "import os; from dotenv import load_dotenv; load_dotenv(); import subprocess; mid=os.getenv('MODEL_ID'); \
-    os.makedirs('models', exist_ok=True); \
-    subprocess.run(['gdown', '--fuzzy', f'https://drive.google.com/uc?id={mid}', '-O', 'models/RandomForestClassifier.sav'], check=True)"
+ARG MODEL_ID
+RUN echo $MODEL_ID
 
+RUN mkdir -p models && \
+    gdown --fuzzy "https://drive.google.com/uc?id=${MODEL_ID}" -O models/RandomForestClassifier.sav
 
-# Instala dependências do projeto
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
