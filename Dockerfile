@@ -18,13 +18,12 @@ COPY . .
 
 ARG MODEL_ID
 RUN mkdir -p models && \
-    gdown --fuzzy "https://drive.google.com/uc?id=${MODEL_ID}" -O models/RandomForestClassifier.sav
+    gdown --fuzzy "https://drive.google.com/uc?id=${MODEL_ID}" -O models/RandomForestClassifier.sav && \
+    mkdir -p /root/.u2net && \
+    wget -O /root/.u2net/u2net.onnx https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
-
-RUN mkdir -p /root/.u2net && \
-    wget -O /root/.u2net/u2net.onnx https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx
 
 ENV PORT=8000
 EXPOSE ${PORT}
