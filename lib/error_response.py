@@ -5,7 +5,7 @@ from typing import Any
 
 class ErrorResponse(BaseModel):
     status_code: int
-    detail: str
+    detail: dict | str
     error: str | None = None
 
 
