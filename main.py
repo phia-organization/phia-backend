@@ -1,5 +1,4 @@
 import cv2
-import uuid
 import numpy as np
 import time
 
@@ -45,6 +44,8 @@ async def upload_image(file: UploadFile = File(...)):
     """
     Endpoint to upload an image and predict pH strip value.
     """
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded.")
 
     filename = file.filename.lower()
     extension = filename.split(".")[-1]
@@ -53,19 +54,30 @@ async def upload_image(file: UploadFile = File(...)):
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail="Invalid file type. Only PNG and JPEG images are allowed.",
+            detail={
+                "description": "Invalid file type. Only PNG and JPEG images are allowed.",
+                "identifier": dir_identifier,
+            },
         )
 
     contents = await file.read()
     size_mb = len(contents) / (1024 * 1024)
     if size_mb > MAX_IMAGE_SIZE_MB:
         raise HTTPException(
-            status_code=400, detail="File too large. Maximum allowed size is 10 MB."
+            status_code=400,
+            detail={
+                "description": "File too large. Maximum allowed size is 10 MB.",
+                "identifier": dir_identifier,
+            },
         )
 
     if imghdr.what(None, contents) not in ALLOWED_EXTENSIONS:
         raise HTTPException(
-            status_code=400, detail="Uploaded file is not a valid image."
+            status_code=400,
+            detail={
+                "description": "Uploaded file is not a valid image.",
+                "identifier": dir_identifier,
+            },
         )
 
     image_np = np.frombuffer(contents, np.uint8)
@@ -74,7 +86,10 @@ async def upload_image(file: UploadFile = File(...)):
     if image is None:
         raise HTTPException(
             status_code=400,
-            detail="Failed to decode the image. Ensure it's a valid image file.",
+            detail={
+                "description": "Failed to decode the image. Ensure it's a valid image file.",
+                "identifier": dir_identifier,
+            },
         )
 
     prediction_class.set_file_info(filename, extension, dir_identifier)
@@ -82,23 +97,35 @@ async def upload_image(file: UploadFile = File(...)):
     try:
         strip_withouth_bg = prediction_class.remove_background(image)
     except Exception as e:
-        return raise_http_500("Background removal failed", e)
+        return raise_http_500(
+            {"description": "Background removal failed", "identifier": dir_identifier},
+            e,
+        )
 
     try:
         cropped_strip = prediction_class.crop(strip_withouth_bg)
         cropped_strip = cv2.cvtColor(cropped_strip, cv2.COLOR_BGR2RGB)
     except Exception as e:
-        return raise_http_500("Cropping failed", e)
+        return raise_http_500(
+            {"description": "Cropping the strip failed", "identifier": dir_identifier},
+            e,
+        )
 
     try:
         median_rgbs = prediction_class.extract_median_rgbs(cropped_strip)
     except Exception as e:
-        return raise_http_500("RGB extraction failed", e)
+        return raise_http_500(
+            {"description": "RGB extraction failed", "identifier": dir_identifier},
+            e,
+        )
 
     try:
         predicted_ph_interval = prediction_class.predict_ph_interval(median_rgbs)
     except Exception as e:
-        return raise_http_500("pH prediction failed", e)
+        return raise_http_500(
+            {"description": "pH prediction failed", "identifier": dir_identifier},
+            e,
+        )
 
     print(f"\n     🎯 Prediction for {dir_identifier}: {predicted_ph_interval}")
 
