@@ -165,7 +165,7 @@ class PredictionClass:
         mask = (bottom_half >= (50, 50, 50)).all(axis=-1)
         # avg_white = np.mean(bottom_half[mask], axis=0)
         std = np.std(bottom_half[mask], axis=0)
-        tolerated_distance = 1 * std
+        tolerated_distance = 0.3 * std
 
         threshold_dark = 50
         color_y1 = upper_half.shape[0] - 1
